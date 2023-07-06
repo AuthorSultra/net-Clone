@@ -116,5 +116,55 @@ class TestControlNetUnitImageToDict(unittest.TestCase):
         self.assert_dict_is_valid()
 
 
+class TestPixelPerfectResolution(unittest.TestCase):
+    def test_outer_fit(self):
+        image = np.zeros((100, 100, 3))
+        target_H, target_W = 50, 100
+        resize_mode = external_code.ResizeMode.OUTER_FIT
+        result = external_code.pixel_perfect_resolution(image, target_H, target_W, resize_mode)
+        expected = 50  # manually computed expected result
+        self.assertEqual(result, expected)
+
+    def test_inner_fit(self):
+        image = np.zeros((100, 100, 3))
+        target_H, target_W = 50, 100
+        resize_mode = external_code.ResizeMode.INNER_FIT
+        result = external_code.pixel_perfect_resolution(image, target_H, target_W, resize_mode)
+        expected = 100  # manually computed expected result
+        self.assertEqual(result, expected)
+
+
+class TestGetAllUnitsFrom(unittest.TestCase):
+    def test_none(self):
+        self.assertListEqual(external_code.get_all_units_from([None]), [])
+
+    def test_bool(self):
+        self.assertListEqual(external_code.get_all_units_from([True]), [])
+
+    def test_inheritance(self):
+        class Foo(external_code.ControlNetUnit):
+            def __init__(self):
+                super().__init__(self)
+                self.bar = 'a'
+        
+        foo = Foo()
+        self.assertListEqual(external_code.get_all_units_from([foo]), [foo])
+
+    def test_dict(self):
+        units = external_code.get_all_units_from([{}])
+        self.assertGreater(len(units), 0)
+        self.assertIsInstance(units[0], external_code.ControlNetUnit)
+
+    def test_unitlike(self):
+        class Foo(object):
+            """ bar """
+
+        foo = Foo()
+        for key in vars(external_code.ControlNetUnit()).keys():
+            setattr(foo, key, True)
+        setattr(foo, 'bar', False)
+        self.assertListEqual(external_code.get_all_units_from([foo]), [foo])
+
+
 if __name__ == '__main__':
     unittest.main()
